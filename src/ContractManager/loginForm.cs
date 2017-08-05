@@ -16,6 +16,10 @@ namespace ContractManager
         public loginForm()
         {
             InitializeComponent();
+            this.ActiveControl = userTxbx;
+
+            userTxbx.Text = "user";
+            PassTxbx.Text = "user";
         }
 
         private void LoginBtn_Click(object sender, EventArgs e)

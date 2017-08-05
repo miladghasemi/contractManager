@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Data.SQLite;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -16,6 +17,9 @@ namespace ContractManager
 {
     public partial class ContractForm : Form
     {
+        private string user;
+        private string TName;
+        private string TVer;
         private UserControl myControl;
         private MemoryStream ContractInMemory;
         private string TemplatesFolder = @"C:\Users\milad\Desktop\Abbas\Templates\";
@@ -26,29 +30,58 @@ namespace ContractManager
         private string contractTempFile = Path.Combine(Path.GetTempPath(), contractName);
         private Document wordDocument;
 
-        public ContractForm()
+        public ContractForm(string name, string ver,string user)
         {
             InitializeComponent();
+            this.user = user;
+            this.TName = name;
+            this.TVer = ver;
+
+
+            contractName = name + ".docx";
+            contractTempFile = Path.Combine(Path.GetTempPath(), contractName);
+
             ContractInMemory = new MemoryStream();
 
             if (File.Exists(contractTempFile))
             {
                 File.Delete(contractTempFile);
             }
-           
 
-            using (FileStream fs = File.OpenRead(TemplatesFolder + contractName  ))
+            SQLiteConnection m_dbConnection;
+            m_dbConnection =
+                new SQLiteConnection("Data Source=contractManager.sqlite;Version=3;");
+            m_dbConnection.Open();
+            string sql = "select * from Templates where Name='" + name + "' and Version='" + ver + "'";
+            SQLiteCommand command = new SQLiteCommand(sql, m_dbConnection);
+            SQLiteDataReader reader = command.ExecuteReader();
+            if (reader.Read())
             {
-                fs.CopyTo(ContractInMemory);
+                byte[] fileStream = (byte[])reader["File"];
+                ContractInMemory = new MemoryStream(fileStream);
+                FileStream file = new FileStream(contractTempFile, FileMode.Create, FileAccess.Write);
+                ContractInMemory.WriteTo(file);
+                file.Close();
+
+                myControl = new SampleForm(contractName);
+                ((SampleForm)myControl).applycng += applyConfig;
+                FillDataPanel.Controls.Add(myControl);
+
+                m_dbConnection.Close();
+
+            }else
+            {
+                m_dbConnection.Close();
+                Close();
             }
+            
 
-            FileStream file = new FileStream(contractTempFile, FileMode.Create, FileAccess.Write);
-            ContractInMemory.WriteTo(file);
-            file.Close();
+            //using (FileStream fs = File.OpenRead(TemplatesFolder + contractName  ))
+            //{
+            //    fs.CopyTo(ContractInMemory);
+            //}
 
-            myControl = new SampleForm(contractName);
-            ((SampleForm)myControl).applycng += applyConfig;
-            FillDataPanel.Controls.Add(myControl);
+            
 
 
 
@@ -142,6 +175,80 @@ namespace ContractManager
                 Microsoft.Office.Interop.Word.Application appWord = new Microsoft.Office.Interop.Word.Application();
                 wordDocument = appWord.Documents.Open(contractTempFile);
                 wordDocument.ExportAsFixedFormat(contractNameAsPDF, WdExportFormat.wdExportFormatPDF);
+            }
+            else
+            {
+                MessageBox.Show("please save all fields and try again.");
+            }
+        }
+
+        private void saveToDatabaseToolStripMenuItem_Click(object sender, EventArgs e)
+        {
+            IContract cntrc = myControl as IContract;
+            if (cntrc.allDataAreSaved == true)
+            {
+                SaveContractToDB frm = new SaveContractToDB(TName, TVer, user);
+                frm.ShowDialog();
+                if (frm.DialogResult == DialogResult.OK)
+                {
+                    SQLiteConnection m_dbConnection;
+                    m_dbConnection =
+                        new SQLiteConnection("Data Source=contractManager.sqlite;Version=3;");
+                    m_dbConnection.Open();
+                    string sql = "select * from Contracts where Name='" 
+                        + frm.contractNameToSave + "' and TemplateName='" + TName + "' and TemplateVersion='"
+                        + TVer + "' and Date='" + DateTime.Now.Date.ToString() + "' and UserName='" + user + "'";
+                    SQLiteCommand command = new SQLiteCommand(sql, m_dbConnection);
+                    SQLiteDataReader reader = command.ExecuteReader();
+                    if (reader.Read())
+                    {
+                        DialogResult dialogResult = MessageBox.Show("Contract Exists.Do you want to replace it?", "Some Title", MessageBoxButtons.YesNo);
+                        if (dialogResult == DialogResult.Yes)
+                        {
+                            byte[] allBytes = File.ReadAllBytes(contractTempFile);
+                            SQLiteCommand editSQL = new SQLiteCommand(
+                                "update Contracts set File = :file, Items = :itms where Name='"
+                                + frm.contractNameToSave + "' and TemplateName='" + TName + "' and TemplateVersion='"
+                                + TVer + "' and Date='" + DateTime.Now.Date.ToString() + "' and UserName='" + user + "'", m_dbConnection);
+                            editSQL.Parameters.Add("@file", DbType.Binary, allBytes.Length).Value = allBytes;
+                            editSQL.Parameters.Add("@itms", DbType.String).Value = "items";
+                            try
+                            {
+                                editSQL.ExecuteNonQuery();
+                            }
+                            catch (Exception ex)
+                            {
+                                throw new Exception(ex.Message);
+                            }
+                        }
+                        m_dbConnection.Close();
+
+                    }
+                    else
+                    {
+                        byte[] allBytes = File.ReadAllBytes(contractTempFile);
+                        SQLiteCommand insertSQL = new SQLiteCommand(
+                            "INSERT INTO Contracts (Name , TemplateName , TemplateVersion , Date , File ,Items,UserName )" +
+                            " VALUES (@name , @tname , @tver , @date , @file ,@itms,@uname )", m_dbConnection);
+                        insertSQL.Parameters.Add("@name", DbType.String).Value = frm.contractNameToSave;
+                        insertSQL.Parameters.Add("@tname", DbType.String).Value = TName;
+                        insertSQL.Parameters.Add("@tver", DbType.String).Value = TVer;
+                        insertSQL.Parameters.Add("@date", DbType.String).Value = DateTime.Now.Date.ToString();
+                        insertSQL.Parameters.Add("@file", DbType.Binary, allBytes.Length).Value = allBytes;
+                        insertSQL.Parameters.Add("@itms", DbType.String).Value = "items";
+                        insertSQL.Parameters.Add("@uname", DbType.String).Value = user;
+                        try
+                        {
+                            insertSQL.ExecuteNonQuery();
+                        }
+                        catch (Exception ex)
+                        {
+                            throw new Exception(ex.Message);
+                        }
+                        m_dbConnection.Close();
+                    }
+                    
+                }
             }
             else
             {

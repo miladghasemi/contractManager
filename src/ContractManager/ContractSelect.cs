@@ -14,6 +14,7 @@ namespace ContractManager
     public partial class ContractSelect : Form
     {
         public string SelectedContract { get; set; }
+        public string Selectedversion { get; set; }
         public ContractSelect()
         {
             InitializeComponent();
@@ -32,7 +33,21 @@ namespace ContractManager
             }
             m_dbConnection.Close();
 
-            SelectedContract = "hello";
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            if (dataGridView1.SelectedRows.Count == 1)
+            {
+                SelectedContract = dataGridView1.SelectedRows[0].Cells[0].Value.ToString();
+                Selectedversion = dataGridView1.SelectedRows[0].Cells[1].Value.ToString();
+                this.DialogResult = DialogResult.Yes;
+                this.Close();
+            }
+            else
+            {
+                MessageBox.Show("you should select one item.");
+            }
         }
     }
 }
