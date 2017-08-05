@@ -16,7 +16,7 @@ namespace ContractManager
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new ContractForm());
+            Application.Run(new loginForm());
         }
     }
 }
