@@ -132,6 +132,12 @@
     <Compile Include="SaveContractToDB.Designer.cs">
       <DependentUpon>SaveContractToDB.cs</DependentUpon>
     </Compile>
+    <Compile Include="searchContracts.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="searchContracts.Designer.cs">
+      <DependentUpon>searchContracts.cs</DependentUpon>
+    </Compile>
     <EmbeddedResource Include="ContractForm.resx">
       <DependentUpon>ContractForm.cs</DependentUpon>
     </EmbeddedResource>
@@ -158,6 +164,9 @@
     </Compile>
     <EmbeddedResource Include="SaveContractToDB.resx">
       <DependentUpon>SaveContractToDB.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="searchContracts.resx">
+      <DependentUpon>searchContracts.cs</DependentUpon>
     </EmbeddedResource>
     <None Include="packages.config" />
     <None Include="Properties\Settings.settings">

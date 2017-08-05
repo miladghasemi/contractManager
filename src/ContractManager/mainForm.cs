@@ -13,10 +13,12 @@ namespace ContractManager
     public partial class mainForm : Form
     {
         private string user;
+        private string access;
         public mainForm(string user, string access)
         {
             InitializeComponent();
             this.user = user;
+            this.access = access;
             if (access == "admin")
             {
                 FooterTxbx.Text =  "user name: " + user +".logined as admin";
@@ -47,6 +49,20 @@ namespace ContractManager
                 frm2.Close();
             }
            
+        }
+
+
+        private void button1_Click(object sender, EventArgs e)
+        {
+            searchContracts frm = new searchContracts(user, access);
+            frm.ShowDialog();
+            if (frm.DialogResult == DialogResult.Yes)
+            {
+                ContractForm frm2 = new ContractForm(frm.tname, frm.tver, frm.user, frm.contractPerson, frm.date);
+                frm.Close();
+                frm2.ShowDialog();
+                frm2.Close();
+            }
         }
     }
 }

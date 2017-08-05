@@ -1,5 +1,6 @@
 ﻿using ContractManager.ContractForms;
 using Microsoft.Office.Interop.Word;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -30,7 +31,7 @@ namespace ContractManager
         private string contractTempFile = Path.Combine(Path.GetTempPath(), contractName);
         private Document wordDocument;
 
-        public ContractForm(string name, string ver,string user)
+        public ContractForm(string name, string ver,string user,string person=null,string Date=null)
         {
             InitializeComponent();
             this.user = user;
@@ -62,8 +63,25 @@ namespace ContractManager
                 FileStream file = new FileStream(contractTempFile, FileMode.Create, FileAccess.Write);
                 ContractInMemory.WriteTo(file);
                 file.Close();
+                Dictionary<string, string> attrs = null;
+                if (!String.IsNullOrEmpty(person) && !String.IsNullOrEmpty(Date))
+                {
 
-                myControl = new SampleForm(contractName);
+                    string sql2 = "select * from Contracts where Name='"
+                        + person + "' and TemplateName='" + TName + "' and TemplateVersion='"
+                        + TVer + "' and Date='" + Date + "' and UserName='" + user + "'";
+                    SQLiteCommand command2 = new SQLiteCommand(sql2, m_dbConnection);
+                    SQLiteDataReader reader2 = command2.ExecuteReader();
+                    if (reader2.Read())
+                    {
+                        attrs = JsonConvert.DeserializeObject<Dictionary<string, string>>((string)reader2["Items"]);
+
+                    }
+                    
+
+                }
+
+                myControl = new SampleForm(attrs);
                 ((SampleForm)myControl).applycng += applyConfig;
                 FillDataPanel.Controls.Add(myControl);
 
@@ -79,13 +97,10 @@ namespace ContractManager
             //using (FileStream fs = File.OpenRead(TemplatesFolder + contractName  ))
             //{
             //    fs.CopyTo(ContractInMemory);
-            //}
-
-            
-
-
+            //}           
 
         }
+
 
         private void applyConfig()
         {
@@ -207,11 +222,11 @@ namespace ContractManager
                         {
                             byte[] allBytes = File.ReadAllBytes(contractTempFile);
                             SQLiteCommand editSQL = new SQLiteCommand(
-                                "update Contracts set File = :file, Items = :itms where Name='"
+                                "update Contracts set File = @file, Items = @itms where Name='"
                                 + frm.contractNameToSave + "' and TemplateName='" + TName + "' and TemplateVersion='"
                                 + TVer + "' and Date='" + DateTime.Now.Date.ToString() + "' and UserName='" + user + "'", m_dbConnection);
                             editSQL.Parameters.Add("@file", DbType.Binary, allBytes.Length).Value = allBytes;
-                            editSQL.Parameters.Add("@itms", DbType.String).Value = "items";
+                            editSQL.Parameters.Add("@itms", DbType.String).Value = Newtonsoft.Json.JsonConvert.SerializeObject(cntrc.allAttributes);
                             try
                             {
                                 editSQL.ExecuteNonQuery();
@@ -235,7 +250,7 @@ namespace ContractManager
                         insertSQL.Parameters.Add("@tver", DbType.String).Value = TVer;
                         insertSQL.Parameters.Add("@date", DbType.String).Value = DateTime.Now.Date.ToString();
                         insertSQL.Parameters.Add("@file", DbType.Binary, allBytes.Length).Value = allBytes;
-                        insertSQL.Parameters.Add("@itms", DbType.String).Value = "items";
+                        insertSQL.Parameters.Add("@itms", DbType.String).Value = Newtonsoft.Json.JsonConvert.SerializeObject(cntrc.allAttributes);
                         insertSQL.Parameters.Add("@uname", DbType.String).Value = user;
                         try
                         {

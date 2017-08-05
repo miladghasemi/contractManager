@@ -32,17 +32,32 @@ namespace ContractManager.ContractForms
         }
 
         private Dictionary<string, TextBox> userInputs;
-        public SampleForm(string nameOfForm)
+        public SampleForm(Dictionary<string, string> initAttributes=null)
         {
             InitializeComponent();
             formName = "فرم نمونه";
             allAttributes = new Dictionary<string, string>();
             userInputs = new Dictionary<string, TextBox>();
-            allAttributes.Add("نام", "");
-            userInputs.Add("نام" , nameTxtBx);
-
-            allAttributes.Add("نام آزمایش", "");
+            
+            userInputs.Add("نام", nameTxtBx);        
             userInputs.Add("نام آزمایش", textBox1);
+            if (initAttributes!= null)
+            {
+                allAttributes.Add("نام", initAttributes["نام"]);
+                allAttributes.Add("نام آزمایش", initAttributes["نام آزمایش"]);
+
+                foreach (var elm in allAttributes.Keys.ToList())
+                {
+                    userInputs[elm].Text = allAttributes[elm];
+                }
+            }
+            else
+            {
+                allAttributes.Add("نام", "");
+                allAttributes.Add("نام آزمایش", "");
+
+            }
+
         }
 
         private void applyBtn_Click(object sender, EventArgs e)
